@@ -14,12 +14,12 @@ using namespace cv;
 int main()
 {
 
-    FaceLandmarkModel modelt("model/haar_facedetection.xml");
+    FaceLandmarkModel model("model/haar_facedetection.xml");
     std::string modelFilePath = "model/landmark-model.bin";
 
-    if (!load_face_landmark_model(modelFilePath, modelt))
+    if (!load_face_landmark_model(modelFilePath, model))
     {
-        std::cout << "Modle Opening Failed." << std::endl;
+        std::cout << "Model Opening Failed." << std::endl;
         std::cin >> modelFilePath;
     }
 
@@ -35,10 +35,10 @@ int main()
     while (1)
     {
         mCamera >> Image;
-        modelt.track(Image, current_shape);
+        model.track(Image, current_shape);
         cv::Vec3d eav;
-        modelt.estimateHeadPose(current_shape[0], eav);
-        modelt.drawPose(Image, current_shape[0], 50);
+        model.estimateHeadPose(current_shape[0], eav);
+        model.drawPose(Image, current_shape[0], 50);
 
         for (int i = 0; i < MAX_FACE_NUM; i++)
         {

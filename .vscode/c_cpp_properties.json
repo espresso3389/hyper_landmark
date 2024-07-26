@@ -1,0 +1,18 @@
+{
+  "env": {
+  },
+  "configurations": [
+    {
+      "name": "Win32",
+      "includePath": [
+        "${workspaceFolder}/flm/include"
+      ],
+      "defines": [],
+      "cStandard": "c17",
+      "cppStandard": "c++17",
+      "intelliSenseMode": "linux-clang-arm64",
+      "configurationProvider": "go2sh.cmake-integration"
+    }
+  ],
+  "version": 4
+}
