@@ -1,6 +1,6 @@
 #include "helper.h"
 
-cv::Mat align_mean(cv::Mat mean, cv::Rect facebox, float scaling_x, float scaling_y, float translation_x, float translation_y)
+cv::Mat align_mean(const cv::Mat &mean, const cv::Rect &facebox, float scaling_x, float scaling_y, float translation_x, float translation_y)
 {
 	using cv::Mat;
 	// Initial estimate x_0: Center the mean face at the [-0.5, 0.5] x [-0.5, 0.5] square (assuming the face-box is that square)

@@ -1,10 +1,10 @@
 #include "face_landmark_model.h"
 
-int eyes_indexs[4] = {36, 39, 42, 45};
+static int eyes_indexs[4] = {36, 39, 42, 45};
 
-int extern_point_indexs[] = {0, 16, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47};
+static int extern_point_indexs[] = {0, 16, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47};
 
-float estimateHeadPoseMat[] = {
+static float estimateHeadPoseMat[] = {
 
     -0.258801, -0.142125, 0.445513, 0.101524, -0.0117096, -0.119747, -0.426367, -0.0197618, -0.143073,
     -0.194121, -0.210882, 0.0989902, 0.0822748, -0.00544055, 0.0184441, -0.0628809, -0.0944775, -0.162363,
@@ -24,11 +24,7 @@ float estimateHeadPoseMat[] = {
 
 };
 
-LinearRegressor::LinearRegressor() : weights(), meanvalue(), x(), isPCA(false)
-{
-}
-
-cv::Mat LinearRegressor::predict(cv::Mat values)
+cv::Mat LinearRegressor::predict(const cv::Mat &values)
 {
     if (this->isPCA)
     {
@@ -71,9 +67,8 @@ cv::Mat LinearRegressor::predict(cv::Mat values)
     }
 }
 
-FaceLandmarkModel::FaceLandmarkModel(std::string faceModel)
+FaceLandmarkModel::FaceLandmarkModel(const std::string &faceModel)
 {
-
     faceModelPath = faceModel;
 
     static int HeadPosePointIndexs[] = {36, 39, 42, 45, 30, 48, 54};
@@ -118,7 +113,7 @@ FaceLandmarkModel::FaceLandmarkModel(std::string faceModel)
     faceBox.resize(MAX_FACE_NUM);
 }
 
-void FaceLandmarkModel::loadFaceDetModelFile(std::string filePath)
+void FaceLandmarkModel::loadFaceDetModelFile(const std::string &filePath)
 {
     faceCascade.load(filePath);
     if (faceCascade.empty())
@@ -127,7 +122,7 @@ void FaceLandmarkModel::loadFaceDetModelFile(std::string filePath)
     }
 }
 
-int FaceLandmarkModel::track(const cv::Mat &src, std::vector<cv::Mat> &current_shape, bool isDetFace)
+int FaceLandmarkModel::track(const cv::Mat &src, std::vector<cv::Mat> &currentShape, bool isDetFace)
 {
     cv::Mat grayImage;
     if (src.channels() == 1)
@@ -150,9 +145,9 @@ int FaceLandmarkModel::track(const cv::Mat &src, std::vector<cv::Mat> &current_s
     for (int i = 0; i < MAX_FACE_NUM; i++)
     {
 
-        if (!current_shape[i].empty())
+        if (!currentShape[i].empty())
         {
-            faceBox[i] = get_enclosing_bbox(current_shape[i]);
+            faceBox[i] = get_enclosing_bbox(currentShape[i]);
         }
         else
         {
@@ -161,30 +156,32 @@ int FaceLandmarkModel::track(const cv::Mat &src, std::vector<cv::Mat> &current_s
     }
     int error_code = SDM_NO_ERROR;
 
-    static int cnt = 0;
-    cnt++;
+    static int count = 0;
+    count++;
     for (int k = 0; k < MAX_FACE_NUM; k++)
     {
         if (isDetFace || faceBox[k].area() < 10000 || (double)faceBox[k].width / (double)faceBox[k].height > 1.08)
         {
-            current_shape[k] = cv::Mat();
+            currentShape[k] = cv::Mat();
             faceBox[k] = cv::Rect(0, 0, 0, 0);
         }
     }
 
-    if (cnt % 25 == 0)
+    if (true) // count % 3 == 0)
     {
-        cnt = 0;
+        count = 0;
         std::vector<cv::Rect> mFaceRects;
         faceCascade.detectMultiScale(grayImage, mFaceRects, 1.3, 3, 0, cv::Size(100, 100));
         if (mFaceRects.size() <= 0)
         {
-            return SDM_ERROR_FACENO;
+            return SDM_ERROR_NO_FACE_FOUND;
         }
 
+        std::cout << "count=" << mFaceRects.size() << std::endl;
         for (int i = 0; i < MIN(mFaceRects.size(), MAX_FACE_NUM); i++)
         {
             faceBox[i] = mFaceRects[i];
+            std::cout << "Rect#" << i << "," << mFaceRects[i].x << "," << mFaceRects[i].y << "," << mFaceRects[i].width << "," << mFaceRects[i].height << std::endl;
         }
         error_code = SDM_ERROR_FACEDET;
     }
@@ -194,31 +191,31 @@ int FaceLandmarkModel::track(const cv::Mat &src, std::vector<cv::Mat> &current_s
         if (!faceBox[k].empty())
         {
 
-            current_shape[k] = align_mean(meanShape, faceBox[k], 1.0, 1.0, 0.0, 0.0);
-            int numLandmarks = current_shape[k].cols / 2;
+            currentShape[k] = align_mean(meanShape, faceBox[k], 1.0, 1.0, 0.0, 0.0);
+            int numLandmarks = currentShape[k].cols / 2;
             for (int i = 0; i < linearRegressors.size(); i++)
             {
-                cv::Mat Descriptor = calculateHogDescriptor(grayImage, current_shape[k], landmarkIndices.at(i), eyeIndices, HoGParams.at(i));
+                cv::Mat Descriptor = calculateHogDescriptor(grayImage, currentShape[k], landmarkIndices.at(i), eyeIndices, HoGParams.at(i));
                 cv::Mat update_step = linearRegressors.at(i).predict(Descriptor);
                 if (isNormal)
                 {
-                    float lx = (current_shape[k].at<float>(eyeIndices.at(0)) + current_shape[k].at<float>(eyeIndices.at(1))) * 0.5;
-                    float ly = (current_shape[k].at<float>(eyeIndices.at(0) + numLandmarks) + current_shape[k].at<float>(eyeIndices.at(1) + numLandmarks)) * 0.5;
-                    float rx = (current_shape[k].at<float>(eyeIndices.at(2)) + current_shape[k].at<float>(eyeIndices.at(3))) * 0.5;
-                    float ry = (current_shape[k].at<float>(eyeIndices.at(2) + numLandmarks) + current_shape[k].at<float>(eyeIndices.at(3) + numLandmarks)) * 0.5;
+                    float lx = (currentShape[k].at<float>(eyeIndices.at(0)) + currentShape[k].at<float>(eyeIndices.at(1))) * 0.5;
+                    float ly = (currentShape[k].at<float>(eyeIndices.at(0) + numLandmarks) + currentShape[k].at<float>(eyeIndices.at(1) + numLandmarks)) * 0.5;
+                    float rx = (currentShape[k].at<float>(eyeIndices.at(2)) + currentShape[k].at<float>(eyeIndices.at(3))) * 0.5;
+                    float ry = (currentShape[k].at<float>(eyeIndices.at(2) + numLandmarks) + currentShape[k].at<float>(eyeIndices.at(3) + numLandmarks)) * 0.5;
                     float distance = sqrt((rx - lx) * (rx - lx) + (ry - ly) * (ry - ly));
                     update_step = update_step * distance;
                 }
-                current_shape[k] = current_shape[k] + update_step;
+                currentShape[k] = currentShape[k] + update_step;
             }
         }
     }
     return error_code;
 }
 
-void FaceLandmarkModel::estimateHeadPose(cv::Mat &current_shape, cv::Vec3d &eav)
+void FaceLandmarkModel::estimateHeadPose(const cv::Mat &currentShape, cv::Vec3d &eav)
 {
-    if (current_shape.empty())
+    if (currentShape.empty())
         return;
     static const int samplePdim = 7;
     float miny = 10000000000.0f;
@@ -227,8 +224,8 @@ void FaceLandmarkModel::estimateHeadPose(cv::Mat &current_shape, cv::Vec3d &eav)
     float sumy = 0.0f;
     for (int i = 0; i < samplePdim; i++)
     {
-        sumx += current_shape.at<float>(estimateHeadPosePointIndices[i]);
-        float y = current_shape.at<float>(estimateHeadPosePointIndices[i] + current_shape.cols / 2);
+        sumx += currentShape.at<float>(estimateHeadPosePointIndices[i]);
+        float y = currentShape.at<float>(estimateHeadPosePointIndices[i] + currentShape.cols / 2);
         sumy += y;
         if (miny > y)
             miny = y;
@@ -241,8 +238,8 @@ void FaceLandmarkModel::estimateHeadPose(cv::Mat &current_shape, cv::Vec3d &eav)
     static cv::Mat tmp(1, 2 * samplePdim + 1, CV_32FC1);
     for (int i = 0; i < samplePdim; i++)
     {
-        tmp.at<float>(i) = (current_shape.at<float>(estimateHeadPosePointIndices[i]) - sumx) / dist;
-        tmp.at<float>(i + samplePdim) = (current_shape.at<float>(estimateHeadPosePointIndices[i] + current_shape.cols / 2) - sumy) / dist;
+        tmp.at<float>(i) = (currentShape.at<float>(estimateHeadPosePointIndices[i]) - sumx) / dist;
+        tmp.at<float>(i + samplePdim) = (currentShape.at<float>(estimateHeadPosePointIndices[i] + currentShape.cols / 2) - sumy) / dist;
     }
     tmp.at<float>(2 * samplePdim) = 1.0f;
     //    cv::Mat predict = tmp*estimateHeadPoseMat;
@@ -262,9 +259,9 @@ void FaceLandmarkModel::estimateHeadPose(cv::Mat &current_shape, cv::Vec3d &eav)
     return;
 }
 
-void FaceLandmarkModel::drawPose(cv::Mat &img, const cv::Mat &current_shape, float lineL)
+void FaceLandmarkModel::drawPose(cv::Mat &img, const cv::Mat &currentShape, float lineL)
 {
-    if (current_shape.empty())
+    if (currentShape.empty())
         return;
     static const int samplePdim = 7;
     float miny = 10000000000.0f;
@@ -273,8 +270,8 @@ void FaceLandmarkModel::drawPose(cv::Mat &img, const cv::Mat &current_shape, flo
     float sumy = 0.0f;
     for (int i = 0; i < samplePdim; i++)
     {
-        sumx += current_shape.at<float>(estimateHeadPosePointIndices[i]);
-        float y = current_shape.at<float>(estimateHeadPosePointIndices[i] + current_shape.cols / 2);
+        sumx += currentShape.at<float>(estimateHeadPosePointIndices[i]);
+        float y = currentShape.at<float>(estimateHeadPosePointIndices[i] + currentShape.cols / 2);
         sumy += y;
         if (miny > y)
             miny = y;
@@ -287,8 +284,8 @@ void FaceLandmarkModel::drawPose(cv::Mat &img, const cv::Mat &current_shape, flo
     static cv::Mat tmp(1, 2 * samplePdim + 1, CV_32FC1);
     for (int i = 0; i < samplePdim; i++)
     {
-        tmp.at<float>(i) = (current_shape.at<float>(estimateHeadPosePointIndices[i]) - sumx) / dist;
-        tmp.at<float>(i + samplePdim) = (current_shape.at<float>(estimateHeadPosePointIndices[i] + current_shape.cols / 2) - sumy) / dist;
+        tmp.at<float>(i) = (currentShape.at<float>(estimateHeadPosePointIndices[i]) - sumx) / dist;
+        tmp.at<float>(i + samplePdim) = (currentShape.at<float>(estimateHeadPosePointIndices[i] + currentShape.cols / 2) - sumy) / dist;
     }
     tmp.at<float>(2 * samplePdim) = 1.0f;
     cv::Mat predict = tmp * estimateHeadPoseMat;
@@ -357,13 +354,13 @@ void FaceLandmarkModel::drawPose(cv::Mat &img, const cv::Mat &current_shape, flo
 }
 
 // Open Landmark Model
-bool load_face_landmark_model(std::string filename, FaceLandmarkModel &model)
+bool FaceLandmarkModel::loadFaceLandmarkModel(const std::string &filename)
 {
     std::ifstream file(filename, std::ios::binary);
     if (!file.is_open())
         return false;
-    cereal::BinaryInputArchive input_archive(file);
-    input_archive(model);
+    cereal::BinaryInputArchive inputArchive(file);
+    inputArchive(*this);
     file.close();
     return true;
 }

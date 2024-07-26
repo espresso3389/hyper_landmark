@@ -20,26 +20,27 @@
 #include "helper.h"
 #include "feature_descriptor.h"
 
-#define SDM_NO_ERROR 0         // �޴���
-#define SDM_ERROR_FACEDET 200  // ����ͨ��CascadeClassifier��⵽����
-#define SDM_ERROR_FACEPOS 201  // ����λ�ñ仯�ϴ󣬿���
-#define SDM_ERROR_FACESIZE 202 // ������С�仯�ϴ󣬿���
-#define SDM_ERROR_FACENO 203   // �Ҳ�������
-#define SDM_ERROR_IMAGE 204    // ͼ�����
+#define SDM_NO_ERROR 0
+#define SDM_ERROR_FACEDET 200       // CascadeClassifierによる顔の再検出
+#define SDM_ERROR_FACEPOS 201       // 不審な顔位置の変更
+#define SDM_ERROR_FACESIZE 202      // 顔の大きさが大きく変化している
+#define SDM_ERROR_NO_FACE_FOUND 203 // 顔が見つからない
+#define SDM_ERROR_IMAGE 204         // 画像エラー
 
-#define SDM_ERROR_ARGS 400  // �������ݴ���
-#define SDM_ERROR_MODEL 401 // ģ�ͼ��ش���
+#define SDM_ERROR_ARGS 400  // パラメータ渡しのエラー
+#define SDM_ERROR_MODEL 401 // モデルの読み込みエラー
 
-#define MAX_FACE_NUM 3 // ����ͬʱ������������
+#define MAX_FACE_NUM 3 // 同時に追跡できる面の数
 
 // �ع�����
 class LinearRegressor
 {
-
 public:
-    LinearRegressor();
+    LinearRegressor() : weights(), meanvalue(), x(), isPCA(false)
+    {
+    }
 
-    cv::Mat predict(cv::Mat values);
+    cv::Mat predict(const cv::Mat &values);
 
 private:
     cv::Mat weights;
@@ -67,17 +68,18 @@ private:
 
 class FaceLandmarkModel
 {
-
 public:
-    FaceLandmarkModel(std::string faceModel);
+    explicit FaceLandmarkModel(const std::string &faceModel);
 
-    void loadFaceDetModelFile(std::string filePath);
+    bool loadFaceLandmarkModel(const std::string &filename);
 
-    int track(const cv::Mat &src, std::vector<cv::Mat> &current_shape, bool isDetFace = false);
+    void loadFaceDetModelFile(const std::string &filePath);
 
-    void estimateHeadPose(cv::Mat &current_shape, cv::Vec3d &eav);
+    int track(const cv::Mat &src, std::vector<cv::Mat> &currentShape, bool isDetFace = false);
 
-    void drawPose(cv::Mat &img, const cv::Mat &current_shape, float lineL = 50);
+    void estimateHeadPose(const cv::Mat &currentShape, cv::Vec3d &eav);
+
+    void drawPose(cv::Mat &img, const cv::Mat &currentShape, float lineL = 50);
 
 private:
     std::string faceModelPath;
@@ -108,8 +110,5 @@ private:
         ar(landmarkIndices, eyeIndices, meanShape, HoGParams, isNormal, linearRegressors);
     }
 };
-
-// ����ģ��
-bool load_face_landmark_model(std::string filename, FaceLandmarkModel &model);
 
 #endif

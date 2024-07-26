@@ -18,7 +18,7 @@
 #include "cereal_extension/mat_cerealisation.hpp"
 
 template <class T = int>
-cv::Rect_<T> get_enclosing_bbox(cv::Mat landmarks)
+cv::Rect_<T> get_enclosing_bbox(const cv::Mat &landmarks)
 {
 	auto num_landmarks = landmarks.cols / 2;
 	double min_x_val, max_x_val, min_y_val, max_y_val;
@@ -30,6 +30,6 @@ cv::Rect_<T> get_enclosing_bbox(cv::Mat landmarks)
 	//    return cv::Rect_<T>(min_x_val, min_y_val, width, height);
 }
 
-cv::Mat align_mean(cv::Mat mean, cv::Rect facebox, float scaling_x = 1.0f, float scaling_y = 1.0f, float translation_x = 0.0f, float translation_y = 0.0f);
+cv::Mat align_mean(const cv::Mat &mean, const cv::Rect &facebox, float scaling_x = 1.0f, float scaling_y = 1.0f, float translation_x = 0.0f, float translation_y = 0.0f);
 
 #endif

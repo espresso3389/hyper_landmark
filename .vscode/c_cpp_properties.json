@@ -5,6 +5,7 @@
     {
       "name": "Win32",
       "includePath": [
+        "/usr/include/opencv4/",
         "${workspaceFolder}/flm/include"
       ],
       "defines": [],

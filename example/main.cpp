@@ -1,6 +1,8 @@
 #include <vector>
 #include <iostream>
 #include <fstream>
+#include <thread>
+#include <chrono>
 #include <opencv2/opencv.hpp>
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -8,62 +10,63 @@
 
 #include "face_landmark_model.h"
 
-using namespace std;
-using namespace cv;
-
 int main()
 {
 
     FaceLandmarkModel model("model/haar_facedetection.xml");
     std::string modelFilePath = "model/landmark-model.bin";
 
-    if (!load_face_landmark_model(modelFilePath, model))
+    if (!model.loadFaceLandmarkModel(modelFilePath))
     {
         std::cout << "Model Opening Failed." << std::endl;
         std::cin >> modelFilePath;
     }
 
-    cv::VideoCapture mCamera(0);
+    cv::VideoCapture mCamera("/home/ub/work/PXL_20240711_101953416.LS.mp4");
     if (!mCamera.isOpened())
     {
         std::cout << "Camera Opening Failed..." << std::endl;
         return 0;
     }
-    cv::Mat Image;
-    std::vector<cv::Mat> current_shape(MAX_FACE_NUM);
-
+    cv::Mat image;
+    std::vector<cv::Mat> currentShapes(MAX_FACE_NUM);
     while (1)
     {
-        mCamera >> Image;
-        model.track(Image, current_shape);
+        mCamera >> image;
+        if (image.empty())
+            break;
+
+        cv::flip(image, image, 0);
+        cv::resize(image, image, cv::Size(), 0.5, 0.5);
+
+        std::cout << "track: " << model.track(image, currentShapes) << std::endl;
         cv::Vec3d eav;
-        model.estimateHeadPose(current_shape[0], eav);
-        model.drawPose(Image, current_shape[0], 50);
+        model.estimateHeadPose(currentShapes[0], eav);
+        model.drawPose(image, currentShapes[0], 50);
 
         for (int i = 0; i < MAX_FACE_NUM; i++)
         {
-            if (!current_shape[i].empty())
+            if (!currentShapes[i].empty())
             {
-
-                int numLandmarks = current_shape[i].cols / 2;
-                for (int j = 0; j < numLandmarks; j++)
+                int nLandmarks = currentShapes[i].cols / 2;
+                for (int j = 0; j < nLandmarks; j++)
                 {
-                    int x = current_shape[i].at<float>(j);
-                    int y = current_shape[i].at<float>(j + numLandmarks);
+                    int x = currentShapes[i].at<float>(j);
+                    int y = currentShapes[i].at<float>(j + nLandmarks);
 
-                    cv::circle(Image, cv::Point(x, y), 2, cv::Scalar(0, 0, 255), -1);
+                    cv::circle(image, cv::Point(x, y), 2, cv::Scalar(0, 0, 255), -1);
                 }
             }
         }
 
-        cv::imshow("Camera", Image);
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+        cv::imshow("Preview", image);
         if (27 == cv::waitKey(5))
-        {
-            mCamera.release();
-            cv::destroyAllWindows();
             break;
-        }
     }
 
+    mCamera.release();
+    cv::destroyAllWindows();
     return 0;
 }
