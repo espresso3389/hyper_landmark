@@ -11,11 +11,11 @@ cv::Mat calculateHogDescriptor(cv::Mat &src, cv::Mat shape, const std::vector<in
 	}
 	else if (src.channels() == 3)
 	{
-		cv::cvtColor(src, grayImage, CV_BGR2GRAY);
+		cv::cvtColor(src, grayImage, cv::COLOR_BGR2GRAY);
 	}
 	else if (src.channels() == 4)
 	{
-		cv::cvtColor(src, grayImage, CV_RGBA2GRAY);
+		cv::cvtColor(src, grayImage, cv::COLOR_RGBA2GRAY);
 	}
 	else
 	{

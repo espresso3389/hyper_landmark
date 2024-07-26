@@ -37,7 +37,7 @@ int main()
         mCamera >> Image;
         modelt.track(Image, current_shape);
         cv::Vec3d eav;
-        modelt.EstimateHeadPose(current_shape[0], eav);
+        modelt.estimateHeadPose(current_shape[0], eav);
         modelt.drawPose(Image, current_shape[0], 50);
 
         for (int i = 0; i < MAX_FACE_NUM; i++)

@@ -1,5 +1,3 @@
-#pragma once
-
 #include "face_landmark_model.h"
 
 int eyes_indexs[4] = {36, 39, 42, 45};
@@ -138,11 +136,11 @@ int FaceLandmarkModel::track(const cv::Mat &src, std::vector<cv::Mat> &current_s
     }
     else if (src.channels() == 3)
     {
-        cv::cvtColor(src, grayImage, CV_BGR2GRAY);
+        cv::cvtColor(src, grayImage, cv::COLOR_BGR2GRAY);
     }
     else if (src.channels() == 4)
     {
-        cv::cvtColor(src, grayImage, CV_RGBA2GRAY);
+        cv::cvtColor(src, grayImage, cv::COLOR_RGBA2GRAY);
     }
     else
     {
@@ -200,7 +198,7 @@ int FaceLandmarkModel::track(const cv::Mat &src, std::vector<cv::Mat> &current_s
             int numLandmarks = current_shape[k].cols / 2;
             for (int i = 0; i < linearRegressors.size(); i++)
             {
-                cv::Mat Descriptor = calculateHogDescriptor(grayImage, current_shape[k], LandmarkIndexs.at(i), eyeIndices, HoGParams.at(i));
+                cv::Mat Descriptor = calculateHogDescriptor(grayImage, current_shape[k], landmarkIndices.at(i), eyeIndices, HoGParams.at(i));
                 cv::Mat update_step = linearRegressors.at(i).predict(Descriptor);
                 if (isNormal)
                 {
